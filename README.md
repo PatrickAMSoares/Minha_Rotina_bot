@@ -24,7 +24,7 @@ precisa deixar o computador ligado e não tem nada para pagar.
 2. Escolha um nome (ex.: `Minha Rotina`) e um usuário terminado em `bot`
    (ex.: `patrick_rotina_bot`).
 3. O BotFather devolve um **token** parecido com
-   `8123456789:AAF-abcDEFghiJKLmnoPQRstuVWXyz12345`. Guarde.
+   `8123456789:AAF-abcDEFghblablaiJKLmnoPQRstuVWXyz12345`. Guarde.
 4. Abra a conversa com o seu bot e mande qualquer mensagem, por exemplo `oi`.
    Isso é necessário para o próximo passo.
 
