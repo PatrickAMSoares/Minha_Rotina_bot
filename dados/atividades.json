@@ -1,6 +1,6 @@
 {
   "fuso": "America/Sao_Paulo",
-  "painel": "https://SEU-USUARIO.github.io/rotina-bot/",
+  "painel": "https://patrickamsoares.github.io/Minha_Rotina_bot/",
   "atividades": [
     { "id": "treino", "nome": "Treino", "dias": ["seg", "ter", "qua", "qui", "sex"] },
     { "id": "estudar", "nome": "Estudar 1h", "dias": ["seg", "ter", "qua", "qui", "sex"] },
