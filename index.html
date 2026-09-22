@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Rotina</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane:      #f9f9f7;
+    --surface:    #fcfcfb;
+    --ink:        #0b0b0b;
+    --ink-2:      #52514e;
+    --muted:      #898781;
+    --grid:       #e1e0d9;
+    --axis:       #c3c2b7;
+    --ring:       rgba(11,11,11,0.10);
+    --series-1:   #2a78d6;
+    --series-2:   #eb6834;
+    --vazio:      #ece9e2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --plane:    #0d0d0d;
+      --surface:  #1a1a19;
+      --ink:      #ffffff;
+      --ink-2:    #c3c2b7;
+      --muted:    #898781;
+      --grid:     #2c2c2a;
+      --axis:     #383835;
+      --ring:     rgba(255,255,255,0.10);
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --vazio:    #2c2c2a;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane:    #0d0d0d;
+    --surface:  #1a1a19;
+    --ink:      #ffffff;
+    --ink-2:    #c3c2b7;
+    --muted:    #898781;
+    --grid:     #2c2c2a;
+    --axis:     #383835;
+    --ring:     rgba(255,255,255,0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --vazio:    #2c2c2a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 16px 64px;
+    background: var(--plane);
+    color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  h1 { font-size: 24px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-2); font-size: 14px; margin: 0 0 24px; }
+
+  .barra-filtros {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    align-items: center; margin-bottom: 20px;
+  }
+  button.filtro, button.tema {
+    font: inherit; font-size: 13px;
+    padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--ring); background: var(--surface);
+    color: var(--ink-2); cursor: pointer;
+  }
+  button.filtro[aria-pressed="true"] {
+    background: var(--ink); color: var(--surface); border-color: var(--ink);
+    font-weight: 600;
+  }
+  .empurra { margin-left: auto; }
+
+  .cartao {
+    background: var(--surface); border: 1px solid var(--ring);
+    border-radius: 14px; padding: 20px 20px 16px; margin-bottom: 16px;
+  }
+  .cartao h2 {
+    font-size: 15px; font-weight: 650; margin: 0 0 2px;
+  }
+  .cartao p.nota { font-size: 13px; color: var(--muted); margin: 0 0 18px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 14px; padding: 16px 18px; }
+  .tile .rot { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+  .tile .val { font-size: 30px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1; }
+  .tile .pe  { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* barras por atividade */
+  .linha-barra { display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 14px; }
+  .linha-barra .topo { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; }
+  .linha-barra .nome { color: var(--ink); }
+  .linha-barra .num { color: var(--ink-2); font-variant-numeric: tabular-nums; font-size: 13px; }
+  .trilho { height: 10px; background: var(--vazio); border-radius: 5px; overflow: hidden; }
+  .preench { height: 100%; background: var(--series-1); border-radius: 5px; transition: width .35s ease; }
+
+  /* grade de constancia */
+  .grade { overflow-x: auto; padding-bottom: 4px; }
+  table.grade-t { border-collapse: separate; border-spacing: 2px; }
+  table.grade-t th {
+    font-weight: 500; font-size: 13px; color: var(--ink-2);
+    text-align: right; padding-right: 10px; white-space: nowrap;
+    position: sticky; left: 0; background: var(--surface);
+  }
+  table.grade-t td { padding: 0; }
+  .cel { width: 14px; height: 14px; border-radius: 3px; display: block; }
+  .cel.feito { background: var(--series-1); }
+  .cel.falhou { background: var(--vazio); box-shadow: inset 0 0 0 1px var(--ring); }
+  .cel.fora { background: transparent; }
+  .rot-data { display: block; width: 14px; font-size: 9px; color: var(--muted);
+              text-align: center; line-height: 1.2; }
+  .legenda { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); margin-top: 14px; }
+  .legenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .chip { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .eixo { font-size: 11px; fill: var(--muted); }
+
+  #dica {
+    position: fixed; pointer-events: none; opacity: 0;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--ring); border-radius: 10px;
+    padding: 8px 11px; font-size: 13px; line-height: 1.45;
+    box-shadow: 0 6px 20px rgba(0,0,0,.14); transition: opacity .12s; z-index: 9;
+    max-width: 240px;
+  }
+  #dica b { font-weight: 650; }
+
+  details.tabela { margin-top: 8px; }
+  details.tabela summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
+  details.tabela table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+  details.tabela th, details.tabela td {
+    text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid);
+    font-variant-numeric: tabular-nums;
+  }
+  details.tabela th { color: var(--ink-2); font-weight: 500; }
+
+  .aviso { color: var(--muted); font-size: 14px; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 28px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Painel de Rotina</h1>
+  </header>
+  <p class="sub" id="periodo-info">Carregando os dados...</p>
+
+  <div class="barra-filtros" role="group" aria-label="Período">
+    <button class="filtro" data-dias="7">7 dias</button>
+    <button class="filtro" data-dias="30" aria-pressed="true">30 dias</button>
+    <button class="filtro" data-dias="90">90 dias</button>
+    <button class="filtro" data-dias="365">1 ano</button>
+    <button class="tema empurra" id="btn-tema">Tema</button>
+  </div>
+
+  <div id="conteudo"></div>
+
+  <footer>Atualizado automaticamente a cada registro no Telegram.</footer>
+</div>
+<div id="dica" role="status"></div>
+
+<script>
+const DIAS_SEM = ["seg","ter","qua","qui","sex","sab","dom"];
+let REG = {}, CFG = {}, JANELA = 30;
+
+const el = (t, attrs = {}, filhos = []) => {
+  const n = document.createElementNS(
+    attrs.ns || "http://www.w3.org/1999/xhtml", t);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "ns") continue;
+    if (k === "text") n.textContent = v;
+    else if (k === "html") n.innerHTML = v;
+    else n.setAttribute(k, v);
+  }
+  filhos.forEach(f => n.appendChild(f));
+  return n;
+};
+const svgEl = (t, attrs = {}, filhos = []) =>
+  el(t, Object.assign({ ns: "http://www.w3.org/2000/svg" }, attrs), filhos);
+
+const iso = d => d.getFullYear() + "-" +
+  String(d.getMonth() + 1).padStart(2, "0") + "-" +
+  String(d.getDate()).padStart(2, "0");
+const curto = s => { const [a, m, d] = s.split("-"); return d + "/" + m; };
+
+function diasDaJanela() {
+  const fim = new Date();
+  const lista = [];
+  for (let i = JANELA - 1; i >= 0; i--) {
+    const d = new Date(fim);
+    d.setDate(fim.getDate() - i);
+    lista.push(iso(d));
+  }
+  return lista;
+}
+
+/* ---------------------------------------------------- agregacoes */
+
+function porAtividade(dias) {
+  const mapa = new Map();
+  dias.forEach(dia => {
+    const reg = REG[dia];
+    if (!reg) return;
+    (reg.tarefas || []).forEach(t => {
+      if (t.tipo !== "fixa") return;
+      if (!mapa.has(t.nome)) mapa.set(t.nome, { nome: t.nome, feitas: 0, total: 0, dias: {} });
+      const a = mapa.get(t.nome);
+      a.total++;
+      if (t.feito) a.feitas++;
+      a.dias[dia] = t.feito ? 1 : 0;
+    });
+  });
+  return [...mapa.values()].sort((a, b) => (a.feitas / a.total) - (b.feitas / b.total));
+}
+
+function porDia(dias) {
+  return dias.map(dia => {
+    const reg = REG[dia];
+    const ts = reg ? (reg.tarefas || []) : [];
+    if (!ts.length) return { dia, pct: null, feitas: 0, total: 0 };
+    const feitas = ts.filter(t => t.feito).length;
+    return { dia, pct: Math.round(feitas / ts.length * 100), feitas, total: ts.length };
+  });
+}
+
+function mediaMovel(serie, n = 7) {
+  return serie.map((p, i) => {
+    const jan = serie.slice(Math.max(0, i - n + 1), i + 1).filter(x => x.pct !== null);
+    if (!jan.length) return { dia: p.dia, pct: null };
+    return { dia: p.dia, pct: Math.round(jan.reduce((s, x) => s + x.pct, 0) / jan.length) };
+  });
+}
+
+function sequencia(atividade, dias) {
+  let atual = 0;
+  for (let i = dias.length - 1; i >= 0; i--) {
+    const v = atividade.dias[dias[i]];
+    if (v === undefined) continue;
+    if (v === 1) atual++; else break;
+  }
+  return atual;
+}
+
+/* ---------------------------------------------------- dica (tooltip) */
+
+const dica = document.getElementById("dica");
+function mostrarDica(ev, html) {
+  dica.innerHTML = html;
+  dica.style.opacity = "1";
+  const r = dica.getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY - r.height - 10;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 14;
+  if (y < 8) y = ev.clientY + 18;
+  dica.style.left = x + "px";
+  dica.style.top = y + "px";
+}
+const esconderDica = () => { dica.style.opacity = "0"; };
+addEventListener("scroll", esconderDica, { passive: true });
+
+/* ---------------------------------------------------- blocos */
+
+function tiles(ativs, serie) {
+  const comDados = serie.filter(p => p.pct !== null);
+  const feitas = comDados.reduce((s, p) => s + p.feitas, 0);
+  const total = comDados.reduce((s, p) => s + p.total, 0);
+  const geral = total ? Math.round(feitas / total * 100) : 0;
+  const pior = ativs[0];
+  const melhor = ativs[ativs.length - 1];
+
+  const caixa = el("div", { class: "tiles" });
+  const tile = (rot, val, pe) => el("div", { class: "tile" }, [
+    el("div", { class: "rot", text: rot }),
+    el("div", { class: "val", text: val }),
+    el("div", { class: "pe", text: pe || "" })
+  ]);
+
+  caixa.appendChild(tile("Conclusão geral", geral + "%", feitas + " de " + total + " atividades"));
+  caixa.appendChild(tile("Dias com registro", String(comDados.length), "de " + JANELA + " dias"));
+  if (pior) {
+    caixa.appendChild(tile("Mais falha", Math.round(pior.feitas / pior.total * 100) + "%", pior.nome));
+  }
+  if (melhor && melhor !== pior) {
+    caixa.appendChild(tile("Mais constante", Math.round(melhor.feitas / melhor.total * 100) + "%", melhor.nome));
+  }
+  return caixa;
+}
+
+function blocoBarras(ativs, dias) {
+  const cartao = el("div", { class: "cartao" }, [
+    el("h2", { text: "Onde você está falhando" }),
+    el("p", { class: "nota", text: "Percentual de conclusão por atividade, da pior para a melhor." })
+  ]);
+
+  if (!ativs.length) {
+    cartao.appendChild(el("p", { class: "aviso", text: "Sem atividades fixas registradas neste período." }));
+    return cartao;
+  }
+
+  ativs.forEach(a => {
+    const pct = Math.round(a.feitas / a.total * 100);
+    const linha = el("div", { class: "linha-barra", tabindex: "0" }, [
+      el("div", { class: "topo" }, [
+        el("span", { class: "nome", text: a.nome }),
+        el("span", { class: "num", text: pct + "%  (" + a.feitas + "/" + a.total + ")" })
+      ]),
+      el("div", { class: "trilho" }, [el("div", { class: "preench", style: "width:" + pct + "%" })])
+    ]);
+    const texto = "<b>" + a.nome + "</b><br>" + a.feitas + " de " + a.total +
+      " dias previstos<br>Sequência atual: " + sequencia(a, dias) + " dia(s)";
+    linha.addEventListener("mousemove", e => mostrarDica(e, texto));
+    linha.addEventListener("mouseleave", esconderDica);
+    cartao.appendChild(linha);
+  });
+
+  const tab = el("details", { class: "tabela" }, [el("summary", { text: "Ver como tabela" })]);
+  const t = el("table");
+  t.appendChild(el("tr", {}, [
+    el("th", { text: "Atividade" }), el("th", { text: "Feitas" }),
+    el("th", { text: "Previstas" }), el("th", { text: "%" })
+  ]));
+  ativs.forEach(a => t.appendChild(el("tr", {}, [
+    el("td", { text: a.nome }), el("td", { text: String(a.feitas) }),
+    el("td", { text: String(a.total) }),
+    el("td", { text: Math.round(a.feitas / a.total * 100) + "%" })
+  ])));
+  tab.appendChild(t);
+  cartao.appendChild(tab);
+  return cartao;
+}
+
+function blocoLinha(serie) {
+  const cartao = el("div", { class: "cartao" }, [
+    el("h2", { text: "Evolução dia a dia" }),
+    el("p", { class: "nota", text: "Percentual do dia concluído e a média dos últimos 7 dias." })
+  ]);
+
+  const pontos = serie.filter(p => p.pct !== null);
+  if (pontos.length < 2) {
+    cartao.appendChild(el("p", { class: "aviso", text: "Ainda são necessários pelo menos dois dias com registro." }));
+    return cartao;
+  }
+
+  const L = 38, R = 16, T = 14, B = 26, W = 860, H = 260;
+  const pw = W - L - R, ph = H - T - B;
+  const media = mediaMovel(serie);
+  const x = i => L + (serie.length === 1 ? pw / 2 : i * pw / (serie.length - 1));
+  const y = v => T + ph - (v / 100) * ph;
+
+  const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+    "aria-label": "Evolução diária do percentual concluído" });
+
+  [0, 25, 50, 75, 100].forEach(v => {
+    svg.appendChild(svgEl("line", { x1: L, x2: W - R, y1: y(v), y2: y(v),
+      stroke: "var(--grid)", "stroke-width": v === 0 ? 0 : 1 }));
+    svg.appendChild(svgEl("text", { x: L - 8, y: y(v) + 4, class: "eixo",
+      "text-anchor": "end", text: v + "%" }));
+  });
+  svg.appendChild(svgEl("line", { x1: L, x2: W - R, y1: y(0), y2: y(0),
+    stroke: "var(--axis)", "stroke-width": 1 }));
+
+  const caminho = (dados, cor, largura, tracejado) => {
+    let d = "", aberto = false;
+    dados.forEach((p, i) => {
+      if (p.pct === null) { aberto = false; return; }
+      d += (aberto ? " L" : " M") + x(i) + " " + y(p.pct);
+      aberto = true;
+    });
+    if (!d) return;
+    svg.appendChild(svgEl("path", { d: d.trim(), fill: "none", stroke: cor,
+      "stroke-width": largura, "stroke-linecap": "round", "stroke-linejoin": "round",
+      "stroke-dasharray": tracejado || "none" }));
+  };
+
+  caminho(media, "var(--series-2)", 2);
+  caminho(serie, "var(--series-1)", 2);
+
+  if (serie.length <= 31) {
+    serie.forEach((p, i) => {
+      if (p.pct === null) return;
+      svg.appendChild(svgEl("circle", { cx: x(i), cy: y(p.pct), r: 4,
+        fill: "var(--series-1)", stroke: "var(--surface)", "stroke-width": 2 }));
+    });
+  }
+
+  const passo = Math.ceil(serie.length / 8);
+  const ultimoI = serie.length - 1;
+  const marcas = [];
+  for (let i = 0; i <= ultimoI; i += passo) marcas.push(i);
+  if (ultimoI - marcas[marcas.length - 1] > passo / 2) marcas.push(ultimoI);
+  else marcas[marcas.length - 1] = ultimoI;
+  marcas.forEach(i => {
+    svg.appendChild(svgEl("text", { x: x(i), y: H - 6, class: "eixo",
+      "text-anchor": i === ultimoI ? "end" : "middle", text: curto(serie[i].dia) }));
+  });
+
+  const ultimo = serie.filter(p => p.pct !== null).slice(-1)[0];
+  const iUlt = serie.findIndex(p => p.dia === ultimo.dia);
+  svg.appendChild(svgEl("text", { x: x(iUlt) + 8, y: y(ultimo.pct) - 8,
+    class: "eixo", fill: "var(--ink-2)", "font-size": "12",
+    "text-anchor": iUlt > serie.length - 4 ? "end" : "start",
+    text: ultimo.pct + "%" }));
+
+  const mira = svgEl("line", { y1: T, y2: T + ph, stroke: "var(--axis)",
+    "stroke-width": 1, opacity: 0 });
+  svg.appendChild(mira);
+  const capa = svgEl("rect", { x: L, y: T, width: pw, height: ph, fill: "transparent" });
+  svg.appendChild(capa);
+
+  capa.addEventListener("mousemove", ev => {
+    const caixa = svg.getBoundingClientRect();
+    const rel = (ev.clientX - caixa.left) / caixa.width * W;
+    let i = Math.round((rel - L) / (pw / Math.max(serie.length - 1, 1)));
+    i = Math.max(0, Math.min(serie.length - 1, i));
+    const p = serie[i], m = media[i];
+    mira.setAttribute("x1", x(i)); mira.setAttribute("x2", x(i));
+    mira.setAttribute("opacity", 1);
+    mostrarDica(ev, "<b>" + curto(p.dia) + "</b><br>" +
+      (p.pct === null ? "sem registro"
+        : p.feitas + " de " + p.total + " (" + p.pct + "%)") +
+      (m.pct !== null ? "<br>Media 7 dias: " + m.pct + "%" : ""));
+  });
+  capa.addEventListener("mouseleave", () => { mira.setAttribute("opacity", 0); esconderDica(); });
+
+  cartao.appendChild(svg);
+  cartao.appendChild(el("div", { class: "legenda" }, [
+    el("span", {}, [el("i", { class: "chip", style: "background:var(--series-1)" }),
+      el("span", { text: "No dia" })]),
+    el("span", {}, [el("i", { class: "chip", style: "background:var(--series-2)" }),
+      el("span", { text: "Média de 7 dias" })])
+  ]));
+  return cartao;
+}
+
+function blocoGrade(ativs, dias) {
+  const janela = dias.slice(-Math.min(dias.length, 35));
+  const cartao = el("div", { class: "cartao" }, [
+    el("h2", { text: "Mapa de constância" }),
+    el("p", { class: "nota", text: "Cada quadrado é um dia. Vazio significa previsto e não feito." })
+  ]);
+  if (!ativs.length) {
+    cartao.appendChild(el("p", { class: "aviso", text: "Sem dados para montar o mapa." }));
+    return cartao;
+  }
+
+  const t = el("table", { class: "grade-t" });
+  const cabecalho = el("tr", {}, [el("th", { text: "" })]);
+  janela.forEach((dia, i) => {
+    const mostra = i === 0 || i === janela.length - 1 || i % 7 === 0;
+    cabecalho.appendChild(el("td", { class: "data-col" }, [
+      el("span", { class: "rot-data", text: mostra ? curto(dia).slice(0, 2) : "" })
+    ]));
+  });
+  t.appendChild(cabecalho);
+  ativs.forEach(a => {
+    const tr = el("tr", {}, [el("th", { text: a.nome })]);
+    janela.forEach(dia => {
+      const v = a.dias[dia];
+      const classe = v === undefined ? "fora" : (v ? "feito" : "falhou");
+      const cel = el("span", { class: "cel " + classe });
+      const td = el("td", {}, [cel]);
+      const rotulo = "<b>" + a.nome + "</b><br>" + curto(dia) + " &middot; " +
+        (v === undefined ? "não previsto" : (v ? "feito" : "não feito"));
+      td.addEventListener("mousemove", e => mostrarDica(e, rotulo));
+      td.addEventListener("mouseleave", esconderDica);
+      tr.appendChild(td);
+    });
+    t.appendChild(tr);
+  });
+  cartao.appendChild(el("div", { class: "grade" }, [t]));
+  cartao.appendChild(el("div", { class: "legenda" }, [
+    el("span", {}, [el("i", { class: "chip", style: "background:var(--series-1)" }),
+      el("span", { text: "Feito" })]),
+    el("span", {}, [el("i", { class: "chip", style: "background:var(--vazio);box-shadow:inset 0 0 0 1px var(--ring)" }),
+      el("span", { text: "Não feito" })]),
+    el("span", {}, [el("i", { class: "chip", style: "background:transparent;box-shadow:inset 0 0 0 1px var(--grid)" }),
+      el("span", { text: "Não previsto" })])
+  ]));
+  return cartao;
+}
+
+/* ---------------------------------------------------- render */
+
+function render() {
+  const alvo = document.getElementById("conteudo");
+  alvo.innerHTML = "";
+  const dias = diasDaJanela();
+  const ativs = porAtividade(dias);
+  const serie = porDia(dias);
+
+  const comRegistro = serie.filter(p => p.pct !== null).length;
+  document.getElementById("periodo-info").textContent =
+    comRegistro
+      ? "Últimos " + JANELA + " dias · " + comRegistro + " dias com registro"
+      : "Nenhum registro neste período ainda.";
+
+  if (!comRegistro) {
+    alvo.appendChild(el("div", { class: "cartao" }, [
+      el("p", { class: "aviso", text: "Assim que o bot enviar a primeira lista e você marcar as atividades, os gráficos aparecem aqui." })
+    ]));
+    return;
+  }
+
+  alvo.appendChild(tiles(ativs, serie));
+  alvo.appendChild(blocoBarras(ativs, dias));
+  alvo.appendChild(blocoLinha(serie));
+  alvo.appendChild(blocoGrade(ativs, dias));
+}
+
+document.querySelectorAll(".filtro").forEach(b => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll(".filtro").forEach(o => o.removeAttribute("aria-pressed"));
+    b.setAttribute("aria-pressed", "true");
+    JANELA = Number(b.dataset.dias);
+    render();
+  });
+});
+
+document.getElementById("btn-tema").addEventListener("click", () => {
+  const atual = document.documentElement.getAttribute("data-theme");
+  const escuro = atual ? atual === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", escuro ? "light" : "dark");
+});
+
+const v = "?v=" + Date.now();
+Promise.all([
+  fetch("dados/registros.json" + v).then(r => r.json()).catch(() => ({})),
+  fetch("dados/atividades.json" + v).then(r => r.json()).catch(() => ({}))
+]).then(([registros, config]) => {
+  REG = registros || {};
+  CFG = config || {};
+  render();
+});
+</script>
+</body>
+</html>

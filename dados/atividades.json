@@ -1,0 +1,11 @@
+{
+  "fuso": "America/Sao_Paulo",
+  "painel": "https://SEU-USUARIO.github.io/rotina-bot/",
+  "atividades": [
+    { "id": "treino", "nome": "Treino", "dias": ["seg", "ter", "qua", "qui", "sex"] },
+    { "id": "estudar", "nome": "Estudar 1h", "dias": ["seg", "ter", "qua", "qui", "sex"] },
+    { "id": "ler", "nome": "Ler 30min", "dias": ["seg", "ter", "qua", "qui", "sex", "sab", "dom"] },
+    { "id": "agua", "nome": "Beber 2L de água", "dias": ["seg", "ter", "qua", "qui", "sex", "sab", "dom"] },
+    { "id": "financas", "nome": "Atualizar controle financeiro", "dias": ["dom"] }
+  ]
+}
