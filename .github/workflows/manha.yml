@@ -1,0 +1,48 @@
+name: Lembrete da manha
+
+on:
+  schedule:
+    # 07:00 em Brasilia (UTC-3) = 10:00 UTC
+    - cron: "0 10 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dados-rotina
+  cancel-in-progress: false
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enviar a lista do dia
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python bot/manha.py
+
+      - name: Salvar os dados
+        run: |
+          git config user.name "rotina-bot"
+          git config user.email "rotina-bot@users.noreply.github.com"
+          if git diff --quiet -- dados/; then
+            echo "nada mudou"
+            exit 0
+          fi
+          git add dados/
+          git commit -m "dados: lembrete da manha"
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "dados salvos"
+              exit 0
+            fi
+            echo "push falhou (tentativa $i), sincronizando..."
+            git pull --rebase --autostash || true
+            sleep $((i * 3))
+          done
+          echo "nao foi possivel salvar os dados"
+          exit 1
