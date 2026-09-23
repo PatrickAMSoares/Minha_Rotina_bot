@@ -1,28 +1,54 @@
-"""Lembrete da manha: monta o dia e envia a lista com botoes."""
+name: Lembrete da manha
 
-import dados
-import telegram
+on:
+  schedule:
+    # 07:00 em Brasilia (UTC-3) = 10:00 UTC
+    - cron: "0 10 * * *"
+  workflow_dispatch:
 
+permissions:
+  contents: write
 
-def main():
-    data_iso = dados.hoje()
-    dia = dados.montar_dia(data_iso)
+concurrency:
+  group: dados-rotina
+  cancel-in-progress: false
 
-    if not dia["tarefas"]:
-        print("sem tarefas hoje, nada a enviar")
-        return
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-    texto = dados.texto_do_dia(data_iso, dia, cabecalho="Bom dia, Patrick")
-    texto += "\n\nToque no botão assim que concluir cada uma."
+      - name: Registrar o que chegou desde o ultimo ciclo
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python bot/processar.py
 
-    resposta = telegram.enviar(texto, dados.teclado_do_dia(data_iso, dia))
-    if resposta.get("ok"):
-        dia["message_id"] = resposta["result"]["message_id"]
-        dados.salvar_dia(data_iso, dia)
-        print("lembrete enviado (%d tarefas)" % len(dia["tarefas"]))
-    else:
-        print("falha ao enviar o lembrete")
+      - name: Enviar a lista do dia
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python bot/manha.py
 
-
-if __name__ == "__main__":
-    main()
+      - name: Salvar os dados
+        run: |
+          git config user.name "rotina-bot"
+          git config user.email "rotina-bot@users.noreply.github.com"
+          if git diff --quiet -- dados/; then
+            echo "nada mudou"
+            exit 0
+          fi
+          git add dados/
+          git commit -m "dados: lembrete da manha"
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "dados salvos"
+              exit 0
+            fi
+            echo "push falhou (tentativa $i), sincronizando..."
+            git pull --rebase --autostash || true
+            sleep $((i * 3))
+          done
+          echo "nao foi possivel salvar os dados"
+          exit 1
