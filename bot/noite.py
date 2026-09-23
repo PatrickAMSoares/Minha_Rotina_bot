@@ -1,9 +1,9 @@
-name: Lembrete da manha
+name: Fechamento do dia
 
 on:
   schedule:
-    # 07:00 em Brasilia (UTC-3) = 10:00 UTC
-    - cron: "0 10 * * *"
+    # 21:00 em Brasilia (UTC-3) = 00:00 UTC do dia seguinte
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  enviar:
+  fechar:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,11 +25,11 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python bot/processar.py
 
-      - name: Enviar a lista do dia
+      - name: Cobrar o que ficou pendente
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python bot/manha.py
+        run: python bot/noite.py
 
       - name: Salvar os dados
         run: |
@@ -40,7 +40,7 @@ jobs:
             exit 0
           fi
           git add dados/
-          git commit -m "dados: lembrete da manha"
+          git commit -m "dados: fechamento do dia"
           for i in 1 2 3 4 5; do
             if git push; then
               echo "dados salvos"
