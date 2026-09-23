@@ -19,6 +19,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Registrar o que chegou desde o ultimo ciclo
+        continue-on-error: true
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python bot/processar.py
+
       - name: Enviar a lista do dia
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
