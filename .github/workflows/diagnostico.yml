@@ -2,6 +2,11 @@ name: Diagnostico
 
 on:
   workflow_dispatch:
+    inputs:
+      enviar_teste:
+        description: "Mandar uma mensagem de teste com botao"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -16,4 +21,5 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ENVIAR_TESTE: ${{ inputs.enviar_teste }}
         run: python bot/diagnostico.py
