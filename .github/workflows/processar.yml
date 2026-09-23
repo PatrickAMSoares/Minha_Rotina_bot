@@ -2,8 +2,9 @@ name: Processar mensagens
 
 on:
   schedule:
-    # A cada 5 minutos. O GitHub pode atrasar alguns minutos em horarios de pico.
-    - cron: "*/5 * * * *"
+    # De hora em hora. O GitHub trata agendamento como "melhor esforco",
+    # entao pode sair alguns minutos depois do previsto.
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 permissions:
