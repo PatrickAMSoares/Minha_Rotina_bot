@@ -1,10 +1,13 @@
-"""Mostra o estado real da ligacao com o Telegram, sem alterar nada.
+"""Mostra o estado real da ligacao com o Telegram.
 
 Rode pelo workflow "Diagnostico" e leia o log. Nada aqui confirma
 mensagens, entao o diagnostico nao consome a fila do bot.
+
+Com a opcao "enviar teste" marcada, manda uma mensagem com um botao
+para voce tocar. E a forma de descobrir se o toque vira atualizacao.
 """
 
-import json
+import os
 
 import dados
 import telegram
@@ -45,7 +48,19 @@ def main():
         print("  resposta: %s" % eu.get("erro"))
         return
 
-    print("  TELEGRAM_CHAT_ID configurado: %r" % telegram.CHAT_ID)
+    linha("1b. O chat_id aponta para a sua conversa?")
+    chat = telegram.chamar("getChat", chat_id=telegram.CHAT_ID)
+    if chat.get("ok"):
+        c = chat["result"]
+        print("  OK - conversa privada com: %s %s (@%s)"
+              % (c.get("first_name", ""), c.get("last_name", ""),
+                 c.get("username", "sem usuario")))
+        print("  tipo: %s" % c.get("type"))
+        print("  -> Confira se esse e voce. Se for outra pessoa ou um grupo,")
+        print("     o TELEGRAM_CHAT_ID esta errado.")
+    else:
+        print("  FALHOU - o TELEGRAM_CHAT_ID nao corresponde a nenhuma conversa")
+        print("  resposta: %s" % chat.get("erro"))
 
     linha("2. Existe webhook atrapalhando?")
     wh = telegram.chamar("getWebhookInfo")
@@ -99,12 +114,35 @@ def main():
         for i, t in enumerate(dia["tarefas"], start=1):
             print("  %d. [%s] %s" % (i, "x" if t["feito"] else " ", t["nome"]))
 
+    if os.environ.get("ENVIAR_TESTE") == "true":
+        linha("7. Mandando uma mensagem de teste com botao")
+        teclado = [[
+            {"text": "✅ Tocar aqui", "callback_data": "teste:tocou"},
+        ]]
+        envio = telegram.enviar(
+            "<b>Teste de botao</b>\n\n"
+            "Toque no botao abaixo e depois rode o Diagnostico de novo "
+            "(sem marcar a opcao de teste).\n\n"
+            "Se o toque aparecer no item 4 ou 5, os botoes funcionam.",
+            teclado,
+        )
+        if envio.get("ok"):
+            print("  enviada - mensagem %s" % envio["result"]["message_id"])
+            tem_botao = "reply_markup" in envio["result"]
+            print("  o Telegram confirmou os botoes na mensagem: %s"
+                  % ("SIM" if tem_botao else "NAO"))
+            if not tem_botao:
+                print("  -> Se veio NAO, a mensagem chegou sem botao nenhum.")
+        else:
+            print("  FALHOU: %s" % envio.get("erro"))
+
     linha("Leitura do resultado")
     print("""
+  - Se o item 1b nao mostrar o seu nome: o chat_id esta errado.
   - Se o item 2 acusou webhook: e essa a causa.
   - Se o item 5 mostra toques esperando: o problema esta no processamento.
   - Se o item 4 nao mostra nenhum "toque em botao": os toques nao estao
-    virando atualizacao, ou a mensagem no Telegram esta sem os botoes.
+    virando atualizacao. Use a opcao de teste para confirmar.
 """)
 
 
