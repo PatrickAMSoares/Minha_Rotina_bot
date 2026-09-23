@@ -1,47 +1,54 @@
-"""Fechamento do dia: cobra o que ficou pendente e fecha o registro."""
+name: Lembrete da manha
 
-import dados
-import telegram
+on:
+  schedule:
+    # 07:00 em Brasilia (UTC-3) = 10:00 UTC
+    - cron: "0 10 * * *"
+  workflow_dispatch:
 
+permissions:
+  contents: write
 
-def main():
-    data_iso = dados.hoje()
-    dia = dados.montar_dia(data_iso)
-    tarefas = dia["tarefas"]
+concurrency:
+  group: dados-rotina
+  cancel-in-progress: false
 
-    if not tarefas:
-        print("sem tarefas hoje")
-        return
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-    pendentes = [t for t in tarefas if not t["feito"]]
-    feitas = len(tarefas) - len(pendentes)
+      - name: Registrar o que chegou desde o ultimo ciclo
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python bot/processar.py
 
-    if not pendentes:
-        texto = "<b>Dia fechado</b>\n%s\n\nTudo concluído: %d de %d. Excelente." % (
-            dados.data_por_extenso(data_iso),
-            feitas,
-            len(tarefas),
-        )
-        telegram.enviar(texto)
-        print("dia completo")
-        return
+      - name: Enviar a lista do dia
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python bot/manha.py
 
-    linhas = [
-        "<b>Fechando o dia</b>",
-        dados.data_por_extenso(data_iso),
-        "",
-        "Concluídas: %d de %d" % (feitas, len(tarefas)),
-        "",
-        "Ainda em aberto:",
-    ]
-    for tarefa in pendentes:
-        linhas.append("⬜ %s" % tarefa["nome"])
-    linhas.append("")
-    linhas.append("Se fez alguma, toque no botão. O que ficar em branco entra como não feito.")
-
-    telegram.enviar("\n".join(linhas), dados.teclado_do_dia(data_iso, dia))
-    print("cobranca enviada (%d pendentes)" % len(pendentes))
-
-
-if __name__ == "__main__":
-    main()
+      - name: Salvar os dados
+        run: |
+          git config user.name "rotina-bot"
+          git config user.email "rotina-bot@users.noreply.github.com"
+          if git diff --quiet -- dados/; then
+            echo "nada mudou"
+            exit 0
+          fi
+          git add dados/
+          git commit -m "dados: lembrete da manha"
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "dados salvos"
+              exit 0
+            fi
+            echo "push falhou (tentativa $i), sincronizando..."
+            git pull --rebase --autostash || true
+            sleep $((i * 3))
+          done
+          echo "nao foi possivel salvar os dados"
+          exit 1
